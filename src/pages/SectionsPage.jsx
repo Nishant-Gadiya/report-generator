@@ -15,22 +15,42 @@ export default function SectionsPage() {
     moveSectionUp,
     moveSectionDown,
     addImageToSection,
+    updateImageInSection,
     removeImageFromSection,
   } = useReport();
 
   const [expandedId, setExpandedId] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
   const fileInputRefs = useRef({});
 
   function toggleExpand(id) {
     setExpandedId((prev) => (prev === id ? null : id));
   }
 
+  function handleAddSection() {
+    const newId = addSection();
+    if (newId) setExpandedId(newId);
+  }
+
   async function handleImageUpload(sectionId, files) {
+    setUploadError(null);
     const opts = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/')) continue;
-      const compressed = await imageCompression(file, opts);
-      await addImageToSection(sectionId, compressed, '', 'medium');
+      if (!file.type.startsWith('image/')) {
+        setUploadError('Please select a valid image file (JPG, PNG, WebP).');
+        continue;
+      }
+      try {
+        const compressed = await imageCompression(file, opts);
+        await addImageToSection(sectionId, compressed, '', 'medium');
+      } catch (err) {
+        console.warn('Image compression fallback to original:', err);
+        try {
+          await addImageToSection(sectionId, file, '', 'medium');
+        } catch (saveErr) {
+          setUploadError(`Could not process image "${file.name}". Please try another image.`);
+        }
+      }
     }
   }
 
@@ -52,11 +72,17 @@ export default function SectionsPage() {
           id="btn-add-section"
           className="btn btn-primary"
           style={{ marginLeft: 'auto', flexShrink: 0 }}
-          onClick={addSection}
+          onClick={handleAddSection}
         >
           + Add Section
         </button>
       </div>
+
+      {uploadError && (
+        <div className="info-box" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #f87171', marginBottom: '12px' }}>
+          ⚠️ {uploadError}
+        </div>
+      )}
 
       {report.sections.length === 0 && (
         <div className="info-box" style={{ textAlign: 'center', padding: '40px' }}>
@@ -223,13 +249,7 @@ export default function SectionsPage() {
                           img={img}
                           sectionId={sec.id}
                           onRemove={removeImageFromSection}
-                          onUpdate={(patch) => {
-                            updateSection(sec.id, {
-                              images: sec.images.map((m) =>
-                                m.id === img.id ? { ...m, ...patch } : m
-                              ),
-                            });
-                          }}
+                          onUpdate={(patch) => updateImageInSection(sec.id, img.id, patch)}
                         />
                       ))}
                     </div>

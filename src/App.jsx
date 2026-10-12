@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ReportProvider, useReport } from './context/ReportContext.jsx';
 import FrontSheetPage from './pages/FrontSheetPage.jsx';
 import SectionsPage from './pages/SectionsPage.jsx';
+import HeaderFooterPage from './pages/HeaderFooterPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import GeneratePage from './pages/GeneratePage.jsx';
 import './App.css';
@@ -12,6 +13,7 @@ import './App.css';
 const NAV_ITEMS = [
   { id: 'front-sheet', label: 'Front Sheet', icon: '📄', page: FrontSheetPage },
   { id: 'sections', label: 'Report Sections', icon: '📝', page: SectionsPage },
+  { id: 'header-footer', label: 'Header & Footer', icon: '🔝', page: HeaderFooterPage },
   { id: 'settings', label: 'Settings & Templates', icon: '⚙️', page: SettingsPage },
   { id: 'generate', label: 'Generate PDF', icon: '🖨️', page: GeneratePage },
 ];

@@ -115,6 +115,41 @@ export const DEFAULT_REPORT = {
     showTableOfContents: true,
     showListOfFigures: false,
   },
+
+  /** ── Header & Footer Settings ── */
+  headerFooter: {
+    header: {
+      enabled: true,
+      text: 'CINENOVA: AI TICKET BOOKING PLATFORM',
+      alignment: 'right', // 'left' | 'center' | 'right'
+      showLine: true,
+      lineThickness: 1,
+      lineWidth: 70, // %
+      lineAlignment: 'center', // 'left' | 'center' | 'right'
+      headerToLineSpacingMm: 3,
+      lineToContentSpacingMm: 8,
+    },
+    footer: {
+      enabled: true,
+      layout: 'left-center-page', // 'left-page' | 'left-center-page' | 'left-right' | 'left-center-right'
+      leftText: 'Department of Information Science and Engineering',
+      centerText: '',
+      rightText: '',
+      showPageNumber: true,
+      showLine: true,
+      lineThickness: 1,
+      lineWidth: 70, // %
+      lineAlignment: 'center', // 'left' | 'center' | 'right'
+      contentToLineSpacingMm: 8,
+      lineToTextSpacingMm: 3,
+      bottomSpacingMm: 8,
+    },
+    pageDecoration: {
+      firstPageBorder: 'double', // 'none' | 'single' | 'double'
+      otherPagesBorder: 'double', // 'none' | 'single' | 'double'
+      border: 'double',
+    },
+  },
 };
 
 /**

@@ -28,7 +28,26 @@ export function ReportProvider({ children }) {
     async function init() {
       const saved = loadReport();
       if (saved) {
-        const hydrated = await rehydrateImages(saved);
+        const mergedHeaderFooter = {
+          ...DEFAULT_REPORT.headerFooter,
+          ...(saved.headerFooter || {}),
+          header: {
+            ...DEFAULT_REPORT.headerFooter.header,
+            ...(saved.headerFooter?.header || {}),
+          },
+          footer: {
+            ...DEFAULT_REPORT.headerFooter.footer,
+            ...(saved.headerFooter?.footer || {}),
+          },
+          pageDecoration: {
+            ...DEFAULT_REPORT.headerFooter.pageDecoration,
+            ...(saved.headerFooter?.pageDecoration || {}),
+          },
+        };
+        const hydrated = await rehydrateImages({
+          ...saved,
+          headerFooter: mergedHeaderFooter,
+        });
         setReport(hydrated);
       } else {
         const fresh = {
@@ -76,12 +95,27 @@ export function ReportProvider({ children }) {
     }));
   }, [updateReport]);
 
-  // ── Section helpers ───────────────────────────────────────────────────────
-  const addSection = useCallback(() => {
+  const updateHeaderFooter = useCallback((patch) => {
     updateReport((prev) => ({
       ...prev,
-      sections: [...prev.sections, createBlankSection()],
+      headerFooter: {
+        ...prev.headerFooter,
+        ...patch,
+        header: { ...prev.headerFooter?.header, ...(patch.header || {}) },
+        footer: { ...prev.headerFooter?.footer, ...(patch.footer || {}) },
+        pageDecoration: { ...prev.headerFooter?.pageDecoration, ...(patch.pageDecoration || {}) },
+      },
     }));
+  }, [updateReport]);
+
+  // ── Section helpers ───────────────────────────────────────────────────────
+  const addSection = useCallback(() => {
+    const newSec = createBlankSection();
+    updateReport((prev) => ({
+      ...prev,
+      sections: [...prev.sections, newSec],
+    }));
+    return newSec.id;
   }, [updateReport]);
 
   const updateSection = useCallback((id, patch) => {
@@ -153,6 +187,26 @@ export function ReportProvider({ children }) {
     }));
   }, [updateReport]);
 
+  /**
+   * Patch a single image's metadata (caption, size, etc.) inside a section.
+   * Uses the functional updater so it always reads the latest state, not a
+   * stale closure snapshot — this is the correct fix for the size-update bug.
+   */
+  const updateImageInSection = useCallback((sectionId, imageId, patch) => {
+    updateReport((prev) => ({
+      ...prev,
+      sections: prev.sections.map((s) => {
+        if (s.id !== sectionId) return s;
+        return {
+          ...s,
+          images: s.images.map((img) =>
+            img.id === imageId ? { ...img, ...patch } : img
+          ),
+        };
+      }),
+    }));
+  }, [updateReport]);
+
   // ── New / Delete report ───────────────────────────────────────────────────
   const newReport = useCallback(async () => {
     await clearAllImageBlobs();
@@ -171,12 +225,14 @@ export function ReportProvider({ children }) {
     loading,
     updateFrontSheet,
     updateSettings,
+    updateHeaderFooter,
     addSection,
     updateSection,
     deleteSection,
     moveSectionUp,
     moveSectionDown,
     addImageToSection,
+    updateImageInSection,
     removeImageFromSection,
     newReport,
   };

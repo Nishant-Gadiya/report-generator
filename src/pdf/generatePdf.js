@@ -8,6 +8,7 @@
  * We also auto-trigger window.print() after Paged.js finishes rendering.
  */
 import { buildPrintDocument } from './printTemplate.js';
+import collegeLogo from '../assets/college-logo.jpg';
 
 /**
  * @param {object} report  The full report data object
@@ -16,7 +17,7 @@ export function openPrintWindow(report) {
   const { settings } = report;
   const template = settings?.template || 'classic';
 
-  const html = buildPrintDocument(report, template);
+  const html = buildPrintDocument(report, template, collegeLogo);
 
   const printWindow = window.open('', '_blank', 'width=1000,height=800,scrollbars=yes');
   if (!printWindow) {
