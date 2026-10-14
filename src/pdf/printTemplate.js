@@ -14,13 +14,18 @@
  *      • number figures sequentially.
  */
 
+import { renderBitCoverSheet, bitCoverSheetCss } from './bitCoverTemplate.js';
+
 /**
  * @param {import('../data/defaultReport').Report} report
  * @param {string} template  'classic' | 'modern'
+ * @param {string} [customLogoUrl]
+ * @param {string} [coverTemplateOverride]
  * @returns {string} Full HTML document string
  */
-export function buildPrintDocument(report, template = 'classic', customLogoUrl = '') {
+export function buildPrintDocument(report, template = 'classic', customLogoUrl = '', coverTemplateOverride = '') {
   const { frontSheet, sections, settings } = report;
+  const coverTemplate = coverTemplateOverride || settings?.coverTemplate || 'jssateb';
   const {
     fontSize,
     lineSpacing,
@@ -65,7 +70,7 @@ export function buildPrintDocument(report, template = 'classic', customLogoUrl =
 
   const logoSrc = customLogoUrl || '/college-logo.jpg';
 
-  const frontSheetHtml = `
+  const jssFrontSheetHtml = `
 <section class="front-sheet" role="region" aria-label="Front Sheet">
   <div class="fs-inner-border">
 
@@ -123,26 +128,134 @@ export function buildPrintDocument(report, template = 'classic', customLogoUrl =
 </section>
 `;
 
+  const frontSheetHtml =
+    coverTemplate === 'bit'
+      ? renderBitCoverSheet(frontSheet, customLogoUrl)
+      : jssFrontSheetHtml;
+
+  const acknowledgement = report.acknowledgement;
+  const abstract = report.abstract;
+  const references = report.references;
+
+  // Determine whether any prelim pages are enabled (for page-type assignments)
+  const hasPrelim = !!(acknowledgement?.enabled || abstract?.enabled || showTableOfContents);
+
+  // ── Acknowledgement HTML ──────────────────────────────────────────────────
+  let acknowledgementHtml = '';
+  if (acknowledgement?.enabled) {
+    const ackHeading = acknowledgement.heading || 'Acknowledgement';
+    const ackParas = (acknowledgement.content || '')
+      .split('\n')
+      .map((p) => (p.trim() ? `<p>${escHtml(p)}</p>` : ''))
+      .join('');
+
+    acknowledgementHtml = `
+<section class="prelim-section" id="report-acknowledgement">
+  <h2 class="prelim-heading">${escHtml(ackHeading)}</h2>
+  <div class="prelim-body">
+    ${ackParas}
+  </div>
+</section>`;
+  }
+
+  // ── Abstract HTML ─────────────────────────────────────────────────────────
+  let abstractHtml = '';
+  if (abstract?.enabled) {
+    const absHeading = abstract.heading || 'Abstract';
+    const absParas = (abstract.content || '')
+      .split('\n')
+      .map((p) => (p.trim() ? `<p>${escHtml(p)}</p>` : ''))
+      .join('');
+
+    abstractHtml = `
+<section class="prelim-section" id="report-abstract">
+  <h2 class="prelim-heading">${escHtml(absHeading)}</h2>
+  <div class="prelim-body">
+    ${absParas}
+  </div>
+</section>`;
+  }
+
+  // ── TOC Entries ───────────────────────────────────────────────────────────
+  const tocEntries = [];
+
+  if (acknowledgement?.enabled) {
+    tocEntries.push({
+      id: 'report-acknowledgement',
+      number: '',
+      title: acknowledgement.heading || 'Acknowledgement',
+    });
+  }
+
+  if (abstract?.enabled) {
+    tocEntries.push({
+      id: 'report-abstract',
+      number: '',
+      title: abstract.heading || 'Abstract',
+    });
+  }
+
+  sections.forEach((sec, idx) => {
+    tocEntries.push({
+      id: sec.id,
+      number: `${idx + 1}.`,
+      title: sec.title,
+    });
+  });
+
+  if (references?.enabled) {
+    tocEntries.push({
+      id: 'report-references',
+      number: '',
+      title: references.heading || 'References',
+    });
+  }
+
   // ── TOC Placeholder ───────────────────────────────────────────────────────
   const tocHtml = showTableOfContents
     ? `
-<section class="toc-section" data-paged-break="page">
+<section class="toc-section">
   <h2 class="toc-heading">Table of Contents</h2>
   <nav class="toc" id="toc-container">
-    ${sections
+    ${tocEntries
       .map(
-        (sec, idx) => `
-    <div class="toc-entry" data-target-id="${sec.id}">
-      <span class="toc-number">${idx + 1}.</span>
-      <span class="toc-title">${escHtml(sec.title)}</span>
+        (entry) => `
+    <div class="toc-entry" data-target-id="${entry.id}">
+      <span class="toc-number">${entry.number || '&nbsp;'}</span>
+      <span class="toc-title">${escHtml(entry.title)}</span>
       <span class="toc-dots"></span>
-      <span class="toc-page" data-ref="${sec.id}">—</span>
+      <span class="toc-page" data-ref="${entry.id}">—</span>
     </div>`
       )
       .join('')}
   </nav>
 </section>`
     : '';
+
+  // ── References HTML ───────────────────────────────────────────────────────
+  let referencesHtml = '';
+  if (references?.enabled) {
+    const refHeading = references.heading || 'References';
+    const refItems = Array.isArray(references.items) ? references.items : [];
+    const itemsHtml = refItems
+      .map((item, idx) => {
+        const itemHtml = formatReferenceHtml(item);
+        return `
+      <div class="reference-item">
+        <span class="reference-num">[${idx + 1}]</span>
+        <div class="reference-body">${itemHtml}</div>
+      </div>`;
+      })
+      .join('\n');
+
+    referencesHtml = `
+<section class="report-section report-references" id="report-references">
+  <h2 class="section-heading">${escHtml(refHeading)}</h2>
+  <div class="references-list">
+    ${itemsHtml || '<p style="color: #666; font-style: italic;">No references added.</p>'}
+  </div>
+</section>`;
+  }
 
   // ── Report Body ───────────────────────────────────────────────────────────
   let figureCounter = 0;
@@ -245,30 +358,48 @@ export function buildPrintDocument(report, template = 'classic', customLogoUrl =
   let pageBottomLeft = 'none';
   let pageBottomCenter = 'none';
   let pageBottomRight = 'none';
+  // Prelim pages use lower-roman, main-content pages use decimal.
+  // These variables hold the main-content (Arabic) page number expression.
+  let pageBottomLeftPrelim = 'none';
+  let pageBottomCenterPrelim = 'none';
+  let pageBottomRightPrelim = 'none';
 
   if (footerConfig.enabled) {
     const layout = footerConfig.layout || 'left-center-page';
     const leftVal = footerConfig.leftText ? JSON.stringify(escHtml(footerConfig.leftText)) : 'none';
     const centerVal = footerConfig.centerText ? JSON.stringify(escHtml(footerConfig.centerText)) : 'none';
     const rightVal = footerConfig.rightText ? JSON.stringify(escHtml(footerConfig.rightText)) : 'none';
-    const pageNumVal = footerConfig.showPageNumber ? 'counter(page)' : 'none';
+    const pageNumDecimal = footerConfig.showPageNumber ? 'counter(page)' : 'none';
+    const pageNumRoman  = footerConfig.showPageNumber ? 'counter(page, lower-roman)' : 'none';
 
     if (layout === 'left-page') {
       pageBottomLeft = leftVal;
       pageBottomCenter = 'none';
-      pageBottomRight = pageNumVal;
+      pageBottomRight = pageNumDecimal;
+      pageBottomLeftPrelim = leftVal;
+      pageBottomCenterPrelim = 'none';
+      pageBottomRightPrelim = pageNumRoman;
     } else if (layout === 'left-center-page') {
       pageBottomLeft = leftVal;
       pageBottomCenter = centerVal;
-      pageBottomRight = pageNumVal;
+      pageBottomRight = pageNumDecimal;
+      pageBottomLeftPrelim = leftVal;
+      pageBottomCenterPrelim = centerVal;
+      pageBottomRightPrelim = pageNumRoman;
     } else if (layout === 'left-right') {
       pageBottomLeft = leftVal;
       pageBottomCenter = 'none';
       pageBottomRight = rightVal;
+      pageBottomLeftPrelim = leftVal;
+      pageBottomCenterPrelim = 'none';
+      pageBottomRightPrelim = rightVal;
     } else if (layout === 'left-center-right') {
       pageBottomLeft = leftVal;
       pageBottomCenter = centerVal;
       pageBottomRight = rightVal;
+      pageBottomLeftPrelim = leftVal;
+      pageBottomCenterPrelim = centerVal;
+      pageBottomRightPrelim = rightVal;
     }
   }
 
@@ -449,6 +580,110 @@ export function buildPrintDocument(report, template = 'classic', customLogoUrl =
   @bottom-left { content: none; }
   @bottom-center { content: none; }
   @bottom-right { content: none; }
+}
+
+/* Preliminary pages (Acknowledgement, Abstract, TOC) use Roman numerals */
+@page prelim {
+  size: A4 portrait;
+  margin-top:    ${computedMarginTop}mm;
+  margin-bottom: ${computedMarginBottom}mm;
+  margin-left:   ${marginLeft}mm;
+  margin-right:  ${marginRight}mm;
+
+  @top-left {
+    content: ${pageTopLeft};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @top-center {
+    content: ${pageTopCenter};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @top-right {
+    content: ${pageTopRight};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @bottom-left {
+    content: ${pageBottomLeftPrelim};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @bottom-center {
+    content: ${pageBottomCenterPrelim};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @bottom-right {
+    content: ${pageBottomRightPrelim};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+}
+
+/* Main content (report body + references) resets to Arabic page 1 */
+@page main-content {
+  size: A4 portrait;
+  margin-top:    ${computedMarginTop}mm;
+  margin-bottom: ${computedMarginBottom}mm;
+  margin-left:   ${marginLeft}mm;
+  margin-right:  ${marginRight}mm;
+
+  @top-left {
+    content: ${pageTopLeft};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @top-center {
+    content: ${pageTopCenter};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @top-right {
+    content: ${pageTopRight};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @bottom-left {
+    content: ${pageBottomLeft};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @bottom-center {
+    content: ${pageBottomCenter};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
+  @bottom-right {
+    content: ${pageBottomRight};
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    font-weight: normal;
+    font-style: normal;
+  }
 }
 
 /* Front sheet overrides to hide margin lines on first page */
@@ -747,6 +982,9 @@ body {
    Table of Contents
    ════════════════════════════════════════════════════════ */
 .toc-section {
+  page: prelim;
+  page-break-before: always;
+  break-before: page;
   page-break-after: always;
   break-after: page;
   padding: 0;
@@ -859,6 +1097,92 @@ body {
 .img-full   { width: 100%; }
 
 /* ════════════════════════════════════════════════════════
+   Main-content wrapper: Arabic numbering restarts at 1
+   ════════════════════════════════════════════════════════ */
+.main-content-wrapper {
+  page: main-content;
+  counter-reset: page 0;
+}
+
+/* ════════════════════════════════════════════════════════
+   Preliminary Sections (Acknowledgement & Abstract)
+   ════════════════════════════════════════════════════════ */
+.prelim-section {
+  page: prelim;
+  page-break-before: always;
+  break-before: page;
+  margin-bottom: 6mm;
+}
+
+.prelim-heading {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: ${Math.round(fontSize * 1.35)}pt;
+  font-weight: bold;
+  font-style: normal;
+  text-align: center;
+  margin-bottom: 6mm;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: ${headingColor};
+  page-break-after: avoid;
+  break-after: avoid;
+  ${isModern ? `border-bottom: 2px solid ${accentColor}; padding-bottom: 2mm;` : ''}
+}
+
+.prelim-body p {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: ${fontSize}pt;
+  font-weight: normal;
+  font-style: normal;
+  line-height: ${lineSpacing};
+  margin-bottom: 3.5mm;
+  text-align: justify;
+  orphans: 3;
+  widows: 3;
+}
+
+/* ════════════════════════════════════════════════════════
+   References Section
+   ════════════════════════════════════════════════════════ */
+.report-references {
+  page-break-before: always;
+  break-before: page;
+  margin-bottom: 6mm;
+}
+
+.references-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5mm;
+}
+
+.reference-item {
+  display: flex;
+  align-items: baseline;
+  gap: 2.5mm;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: ${fontSize}pt;
+  line-height: ${lineSpacing};
+  text-align: justify;
+}
+
+.reference-num {
+  font-weight: bold;
+  min-width: 7mm;
+  flex-shrink: 0;
+}
+
+.reference-body {
+  flex: 1;
+}
+
+.ref-link {
+  color: #1a56db !important;
+  text-decoration: underline !important;
+  word-break: break-all;
+}
+
+/* ════════════════════════════════════════════════════════
    Paged.js generated elements
    ════════════════════════════════════════════════════════ */
 .pagedjs_page_content { overflow: hidden; }
@@ -869,30 +1193,70 @@ ${
     ? `
 .toc-heading { color: #1a56db; border-color: #1a56db; }
 .section-heading { color: #1a56db; }
+.prelim-heading { color: #1a56db; border-color: #1a56db; }
 `
     : ''
 }
+
+/* BIT Cover Sheet Template CSS */
+${coverTemplate === 'bit' ? bitCoverSheetCss : ''}
 </style>
 </head>
 <body>
 
 ${frontSheetHtml}
 
+${acknowledgementHtml}
+
+${abstractHtml}
+
 ${tocHtml}
 
+<div class="main-content-wrapper">
 <article class="report-body" id="report-body">
 ${bodySections}
 </article>
+
+${referencesHtml}
+</div>
 
 <!-- Paged.js polyfill (CDN) -->
 <script src="https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.js"></script>
 
 <script>
 /* ────────────────────────────────────────────────────────
-   Paged.js Hooks:
-   1. After rendering is complete, read the page numbers that
-      Paged.js has assigned to each section and write them into
-      the TOC.
+   Prelim section IDs (Acknowledgement, Abstract, TOC itself)
+   These pages display Roman-numeral page numbers in the TOC.
+   ──────────────────────────────────────────────────────── */
+const PRELIM_IDS = new Set(${JSON.stringify(
+  [
+    acknowledgement?.enabled ? 'report-acknowledgement' : null,
+    abstract?.enabled        ? 'report-abstract'        : null,
+  ].filter(Boolean)
+)});
+
+/* ────────────────────────────────────────────────────────
+   Convert an integer to a lowercase Roman numeral string.
+   ──────────────────────────────────────────────────────── */
+function toRoman(n) {
+  if (!n || n < 1) return '—';
+  const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
+  const syms = ['m','cm','d','cd','c','xc','l','xl','x','ix','v','iv','i'];
+  let result = '';
+  for (let i = 0; i < vals.length; i++) {
+    while (n >= vals[i]) { result += syms[i]; n -= vals[i]; }
+  }
+  return result;
+}
+
+/* ────────────────────────────────────────────────────────
+   Paged.js hook: after layout, fill TOC page numbers.
+   - Prelim entries (Ack, Abs): Roman numeral from the
+     named-page counter on that Paged.js page.
+   - Body / References entries: Arabic numeral.
+   Paged.js resets its per-named-page counter independently,
+   so we read data-page-number which tracks the page counter
+   for the current named page context.
    ──────────────────────────────────────────────────────── */
 class TocHook extends Paged.Handler {
   constructor(chunker, polisher, caller) {
@@ -900,18 +1264,27 @@ class TocHook extends Paged.Handler {
   }
 
   afterRendered(pages) {
-    const tocEntries = document.querySelectorAll('.toc-page[data-ref]');
-    tocEntries.forEach((el) => {
+    // Build a map: element id -> Paged.js data-page-number (integer)
+    const tocEls = document.querySelectorAll('.toc-page[data-ref]');
+    tocEls.forEach((el) => {
       const targetId = el.getAttribute('data-ref');
       const targetEl = document.getElementById(targetId);
       if (!targetEl) return;
 
-      // Walk up to find the Paged.js page wrapper that contains this element
-      let pageEl = targetEl.closest('.pagedjs_page');
+      const pageEl = targetEl.closest('.pagedjs_page');
       if (!pageEl) return;
 
-      const pageNum = pageEl.getAttribute('data-page-number');
-      el.textContent = pageNum || '—';
+      const rawNum = parseInt(pageEl.getAttribute('data-page-number'), 10);
+      if (!rawNum) { el.textContent = '—'; return; }
+
+      if (PRELIM_IDS.has(targetId)) {
+        // Acknowledgement or Abstract: Roman
+        el.textContent = toRoman(rawNum);
+      } else {
+        // TOC page itself is also prelim but points to body sections;
+        // body sections and references show Arabic numbers.
+        el.textContent = String(rawNum);
+      }
     });
   }
 }
@@ -931,5 +1304,54 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/**
+ * Format a reference item into an HTML citation string.
+ * Supports 'book', 'paper', and 'website'.
+ * URLs are rendered in blue with underline.
+ */
+export function formatReferenceHtml(ref) {
+  if (!ref) return '';
+  const parts = [];
+
+  const author = ref.author ? ref.author.trim() : '';
+  const year = ref.year ? String(ref.year).trim() : '';
+  const title = ref.title ? ref.title.trim() : '';
+  const publisher = ref.publisher ? ref.publisher.trim() : '';
+  const url = ref.url ? ref.url.trim() : '';
+
+  if (author) {
+    parts.push(escHtml(author));
+  }
+
+  if (year) {
+    parts.push(`(${escHtml(year)})`);
+  }
+
+  if (title) {
+    if (ref.type === 'paper') {
+      parts.push(`"${escHtml(title)}"`);
+    } else {
+      parts.push(`<i>${escHtml(title)}</i>`);
+    }
+  }
+
+  if (publisher) {
+    parts.push(escHtml(publisher));
+  }
+
+  let text = parts.join(' ');
+  if (text && !text.endsWith('.')) {
+    text += '.';
+  }
+
+  if (url) {
+    const hrefUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    const urlHtml = `<a href="${escHtml(hrefUrl)}" class="ref-link" style="color: #1a56db; text-decoration: underline;" target="_blank" rel="noopener noreferrer">${escHtml(url)}</a>`;
+    text = text ? `${text} ${urlHtml}` : urlHtml;
+  }
+
+  return text;
 }
 

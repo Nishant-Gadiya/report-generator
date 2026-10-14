@@ -9,6 +9,7 @@
  */
 import { buildPrintDocument } from './printTemplate.js';
 import collegeLogo from '../assets/college-logo.jpg';
+import bitLogo from '../assets/bit-logo.png';
 
 /**
  * @param {object} report  The full report data object
@@ -16,8 +17,10 @@ import collegeLogo from '../assets/college-logo.jpg';
 export function openPrintWindow(report) {
   const { settings } = report;
   const template = settings?.template || 'classic';
+  const coverTemplate = settings?.coverTemplate || 'jssateb';
 
-  const html = buildPrintDocument(report, template, collegeLogo);
+  const logoToUse = coverTemplate === 'bit' ? (bitLogo || '') : collegeLogo;
+  const html = buildPrintDocument(report, template, logoToUse, coverTemplate);
 
   const printWindow = window.open('', '_blank', 'width=1000,height=800,scrollbars=yes');
   if (!printWindow) {

@@ -21,10 +21,16 @@ export const DEFAULT_REPORT = {
       { name: 'Mrs. Rashmi B R', designation: 'Assistant Professor' },
     ],
     students: [
-      { name: '', usn: '' },
-      { name: '', usn: '' },
-      { name: '', usn: '' },
+      { name: '', usn: '', section: '', email: '', phone: '' },
+      { name: '', usn: '', section: '', email: '', phone: '' },
+      { name: '', usn: '', section: '', email: '', phone: '' },
     ],
+    affiliation: 'An Autonomous Institution affiliated to VTU, Belagavi',
+    address: 'K.R. Road, V.V.Pura, Bengaluru-560 004',
+    synopsisTitle: 'Minor-Project Synopsis (BCS586)',
+    domain: 'Web Application Development & Real-Time Systems',
+    groupId: '',
+    coordinatorTitle: 'Signature of the Mini Project Co-ordinator',
   },
 
   /** ── Report Sections ── */
@@ -93,19 +99,88 @@ export const DEFAULT_REPORT = {
       pageBreakBefore: false,
       images: [],
     },
-    {
-      id: 'sec-9',
-      title: 'References',
-      content:
-        '1. Ricci, F., Rokach, L., & Shapira, B. (2015). Recommender Systems Handbook. Springer.\n2. Géron, A. (2022). Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow (3rd ed.). O\'Reilly Media.\n3. MongoDB Inc. (2024). MongoDB Documentation. https://www.mongodb.com/docs/\n4. Socket.IO. (2024). Socket.IO Documentation. https://socket.io/docs/v4/\n5. Razorpay. (2024). Razorpay Payment APIs. https://razorpay.com/docs/\n6. React. (2024). React Documentation. https://react.dev/',
-      pageBreakBefore: true,
-      images: [],
-    },
   ],
+
+  /** ── Preliminary Pages & References ── */
+  acknowledgement: {
+    enabled: true,
+    heading: 'Acknowledgement',
+    content:
+      'The satisfaction and euphoria that accompany the successful completion of any task would be incomplete without mentioning the people who made it possible, whose constant guidance and encouragement served as a beacon of light.\n\nWe express our sincere gratitude and indebtedness to our esteemed institution and our Head of Department for providing us with the necessary facilities and support.\n\nWe place on record our profound gratitude to our project guide for their invaluable guidance, constructive suggestions, and continuous motivation throughout the development of this project.\n\nFinally, we thank our parents, friends, and all those who directly or indirectly helped us in the successful completion of this work.',
+  },
+
+  abstract: {
+    enabled: true,
+    heading: 'Abstract',
+    content:
+      'This report presents CineNova, an AI-powered movie ticket booking platform that leverages modern web technologies and machine learning to enhance the cinema-going experience. The platform integrates intelligent recommendation systems, real-time seat availability, and seamless payment processing.\n\nCineNova addresses several limitations found in traditional ticket booking systems, including poor user experience, lack of personalisation, and inefficient seat management. By incorporating artificial intelligence, the system can learn user preferences and provide tailored recommendations.',
+  },
+
+  references: {
+    enabled: true,
+    heading: 'References',
+    items: [
+      {
+        id: 'ref-1',
+        type: 'book',
+        title: 'Recommender Systems Handbook',
+        author: 'Ricci, F., Rokach, L., & Shapira, B.',
+        year: '2015',
+        publisher: 'Springer',
+        url: '',
+      },
+      {
+        id: 'ref-2',
+        type: 'book',
+        title: 'Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow (3rd ed.)',
+        author: 'Géron, A.',
+        year: '2022',
+        publisher: "O'Reilly Media",
+        url: '',
+      },
+      {
+        id: 'ref-3',
+        type: 'website',
+        title: 'MongoDB Documentation',
+        author: 'MongoDB Inc.',
+        year: '2024',
+        publisher: '',
+        url: 'https://www.mongodb.com/docs/',
+      },
+      {
+        id: 'ref-4',
+        type: 'website',
+        title: 'Socket.IO Documentation',
+        author: 'Socket.IO',
+        year: '2024',
+        publisher: '',
+        url: 'https://socket.io/docs/v4/',
+      },
+      {
+        id: 'ref-5',
+        type: 'website',
+        title: 'Razorpay Payment APIs',
+        author: 'Razorpay',
+        year: '2024',
+        publisher: '',
+        url: 'https://razorpay.com/docs/',
+      },
+      {
+        id: 'ref-6',
+        type: 'website',
+        title: 'React Documentation',
+        author: 'React',
+        year: '2024',
+        publisher: '',
+        url: 'https://react.dev/',
+      },
+    ],
+  },
 
   /** ── Settings ── */
   settings: {
     template: 'classic', // 'classic' | 'modern'
+    coverTemplate: 'jssateb', // 'jssateb' | 'bit'
     fontSize: 12,        // pt
     lineSpacing: 1.5,
     marginTop: 25,       // mm
@@ -169,5 +244,27 @@ export function createBlankSection() {
     content: '',
     pageBreakBefore: false,
     images: [],
+  };
+}
+
+/**
+ * Generate a unique reference ID.
+ */
+export function newReferenceId() {
+  return `ref-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/**
+ * Create a blank reference.
+ */
+export function createBlankReference(type = 'book') {
+  return {
+    id: newReferenceId(),
+    type, // 'book' | 'paper' | 'website'
+    title: '',
+    author: '',
+    year: '',
+    publisher: '',
+    url: '',
   };
 }

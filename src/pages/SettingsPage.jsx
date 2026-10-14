@@ -4,6 +4,19 @@
  */
 import { useReport } from '../context/ReportContext.jsx';
 
+const COVER_TEMPLATES = [
+  {
+    id: 'jssateb',
+    name: 'JSSATEB (Default)',
+    desc: 'Formal academic cover sheet with red headers, circular emblem, and 2-column student table.',
+  },
+  {
+    id: 'bit',
+    name: 'Bangalore Institute of Technology (BIT)',
+    desc: 'Minor-project synopsis cover sheet with project group, details, and office evaluation tables.',
+  },
+];
+
 const TEMPLATES = [
   {
     id: 'classic',
@@ -20,8 +33,17 @@ const TEMPLATES = [
 ];
 
 export default function SettingsPage() {
-  const { report, updateSettings } = useReport();
+  const {
+    report,
+    updateSettings,
+    updateAcknowledgement,
+    updateAbstract,
+    updateReferences,
+  } = useReport();
   const s = report.settings;
+  const ack = report.acknowledgement;
+  const abs = report.abstract;
+  const refs = report.references;
 
   function set(field, value) {
     updateSettings({ [field]: value });
@@ -33,6 +55,39 @@ export default function SettingsPage() {
       <p className="page-subtitle">
         Choose a template and configure typography and page margins.
       </p>
+
+      {/* ── Cover Sheet Template Selection ── */}
+      <div className="card">
+        <div className="card-title"><span className="card-icon">📑</span> Cover Sheet Template</div>
+        <div className="template-grid">
+          {COVER_TEMPLATES.map((tmpl) => {
+            const isSelected = (s.coverTemplate || 'jssateb') === tmpl.id;
+            return (
+              <div
+                key={tmpl.id}
+                id={`cover-template-card-${tmpl.id}`}
+                className={`template-card ${isSelected ? 'selected' : ''}`}
+                onClick={() => set('coverTemplate', tmpl.id)}
+                role="button"
+                aria-pressed={isSelected}
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && set('coverTemplate', tmpl.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="template-info" style={{ padding: '16px' }}>
+                  <div className="template-name">
+                    {tmpl.name}
+                    {isSelected && (
+                      <span className="badge badge-success" style={{ marginLeft: '8px' }}>Selected</span>
+                    )}
+                  </div>
+                  <div className="template-desc">{tmpl.desc}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* ── Template Selection ── */}
       <div className="card">
@@ -172,6 +227,69 @@ export default function SettingsPage() {
               onChange={(e) => set('showTableOfContents', e.target.checked)}
             />
             Include Table of Contents
+          </label>
+
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              cursor: 'pointer',
+              textTransform: 'none',
+              fontSize: '.9rem',
+              fontWeight: '500',
+              color: 'var(--c-text)',
+            }}
+          >
+            <input
+              id="settings-show-acknowledgement"
+              type="checkbox"
+              checked={!!ack?.enabled}
+              onChange={(e) => updateAcknowledgement({ enabled: e.target.checked })}
+            />
+            Include Acknowledgement Page
+          </label>
+
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              cursor: 'pointer',
+              textTransform: 'none',
+              fontSize: '.9rem',
+              fontWeight: '500',
+              color: 'var(--c-text)',
+            }}
+          >
+            <input
+              id="settings-show-abstract"
+              type="checkbox"
+              checked={!!abs?.enabled}
+              onChange={(e) => updateAbstract({ enabled: e.target.checked })}
+            />
+            Include Abstract Page
+          </label>
+
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              cursor: 'pointer',
+              textTransform: 'none',
+              fontSize: '.9rem',
+              fontWeight: '500',
+              color: 'var(--c-text)',
+            }}
+          >
+            <input
+              id="settings-show-references"
+              type="checkbox"
+              checked={!!refs?.enabled}
+              onChange={(e) => updateReferences({ enabled: e.target.checked })}
+            />
+            Include References Section
           </label>
 
           <label

@@ -4,7 +4,9 @@
 import { useState } from 'react';
 import { ReportProvider, useReport } from './context/ReportContext.jsx';
 import FrontSheetPage from './pages/FrontSheetPage.jsx';
+import PrelimsPage from './pages/PrelimsPage.jsx';
 import SectionsPage from './pages/SectionsPage.jsx';
+import ReferencesPage from './pages/ReferencesPage.jsx';
 import HeaderFooterPage from './pages/HeaderFooterPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import GeneratePage from './pages/GeneratePage.jsx';
@@ -12,7 +14,9 @@ import './App.css';
 
 const NAV_ITEMS = [
   { id: 'front-sheet', label: 'Front Sheet', icon: '📄', page: FrontSheetPage },
+  { id: 'prelims', label: 'Acknowledgement & Abstract', icon: '📑', page: PrelimsPage },
   { id: 'sections', label: 'Report Sections', icon: '📝', page: SectionsPage },
+  { id: 'references', label: 'References', icon: '📚', page: ReferencesPage },
   { id: 'header-footer', label: 'Header & Footer', icon: '🔝', page: HeaderFooterPage },
   { id: 'settings', label: 'Settings & Templates', icon: '⚙️', page: SettingsPage },
   { id: 'generate', label: 'Generate PDF', icon: '🖨️', page: GeneratePage },
@@ -88,6 +92,7 @@ function AppShell() {
         <div className="sidebar-section-label">Report Info</div>
         <div style={{ padding: '8px 16px', fontSize: '.75rem', color: 'var(--c-text-dim)', lineHeight: '1.6' }}>
           <div>{report?.sections?.length ?? 0} sections</div>
+          <div>{report?.references?.items?.length ?? 0} references</div>
           <div>{report?.frontSheet?.students?.filter((s) => s.name || s.usn).length ?? 0} students</div>
           <div>Template: {report?.settings?.template ?? '—'}</div>
         </div>

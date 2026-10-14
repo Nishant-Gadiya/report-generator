@@ -5,7 +5,7 @@
  * Autosaves to localStorage on every change (debounced 800ms).
  */
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { DEFAULT_REPORT, createBlankSection } from '../data/defaultReport.js';
+import { DEFAULT_REPORT, createBlankSection, createBlankReference } from '../data/defaultReport.js';
 import {
   saveReport,
   loadReport,
@@ -44,9 +44,31 @@ export function ReportProvider({ children }) {
             ...(saved.headerFooter?.pageDecoration || {}),
           },
         };
+        const mergedAcknowledgement = {
+          ...DEFAULT_REPORT.acknowledgement,
+          ...(saved.acknowledgement || {}),
+        };
+        const mergedAbstract = {
+          ...DEFAULT_REPORT.abstract,
+          ...(saved.abstract || {}),
+        };
+        const mergedReferences = {
+          ...DEFAULT_REPORT.references,
+          ...(saved.references || {}),
+          items: Array.isArray(saved.references?.items)
+            ? saved.references.items
+            : DEFAULT_REPORT.references.items,
+        };
+        const filteredSections = (saved.sections || []).filter(
+          (s) => !(s.id === 'sec-9' && s.title === 'References')
+        );
         const hydrated = await rehydrateImages({
           ...saved,
+          sections: filteredSections.length > 0 ? filteredSections : saved.sections,
           headerFooter: mergedHeaderFooter,
+          acknowledgement: mergedAcknowledgement,
+          abstract: mergedAbstract,
+          references: mergedReferences,
         });
         setReport(hydrated);
       } else {
@@ -207,6 +229,90 @@ export function ReportProvider({ children }) {
     }));
   }, [updateReport]);
 
+  // ── Preliminary Pages & References helpers ────────────────────────────────
+  const updateAcknowledgement = useCallback((patch) => {
+    updateReport((prev) => ({
+      ...prev,
+      acknowledgement: { ...prev.acknowledgement, ...patch },
+    }));
+  }, [updateReport]);
+
+  const updateAbstract = useCallback((patch) => {
+    updateReport((prev) => ({
+      ...prev,
+      abstract: { ...prev.abstract, ...patch },
+    }));
+  }, [updateReport]);
+
+  const updateReferences = useCallback((patch) => {
+    updateReport((prev) => ({
+      ...prev,
+      references: { ...prev.references, ...patch },
+    }));
+  }, [updateReport]);
+
+  const addReference = useCallback((type = 'book') => {
+    const newRef = createBlankReference(type);
+    updateReport((prev) => ({
+      ...prev,
+      references: {
+        ...prev.references,
+        items: [...(prev.references?.items || []), newRef],
+      },
+    }));
+    return newRef.id;
+  }, [updateReport]);
+
+  const updateReferenceItem = useCallback((id, patch) => {
+    updateReport((prev) => ({
+      ...prev,
+      references: {
+        ...prev.references,
+        items: (prev.references?.items || []).map((item) =>
+          item.id === id ? { ...item, ...patch } : item
+        ),
+      },
+    }));
+  }, [updateReport]);
+
+  const deleteReferenceItem = useCallback((id) => {
+    updateReport((prev) => ({
+      ...prev,
+      references: {
+        ...prev.references,
+        items: (prev.references?.items || []).filter((item) => item.id !== id),
+      },
+    }));
+  }, [updateReport]);
+
+  const moveReferenceItemUp = useCallback((id) => {
+    updateReport((prev) => {
+      const items = prev.references?.items || [];
+      const idx = items.findIndex((r) => r.id === id);
+      if (idx <= 0) return prev;
+      const nextItems = [...items];
+      [nextItems[idx - 1], nextItems[idx]] = [nextItems[idx], nextItems[idx - 1]];
+      return {
+        ...prev,
+        references: { ...prev.references, items: nextItems },
+      };
+    });
+  }, [updateReport]);
+
+  const moveReferenceItemDown = useCallback((id) => {
+    updateReport((prev) => {
+      const items = prev.references?.items || [];
+      const idx = items.findIndex((r) => r.id === id);
+      if (idx < 0 || idx >= items.length - 1) return prev;
+      const nextItems = [...items];
+      [nextItems[idx], nextItems[idx + 1]] = [nextItems[idx + 1], nextItems[idx]];
+      return {
+        ...prev,
+        references: { ...prev.references, items: nextItems },
+      };
+    });
+  }, [updateReport]);
+
   // ── New / Delete report ───────────────────────────────────────────────────
   const newReport = useCallback(async () => {
     await clearAllImageBlobs();
@@ -226,6 +332,14 @@ export function ReportProvider({ children }) {
     updateFrontSheet,
     updateSettings,
     updateHeaderFooter,
+    updateAcknowledgement,
+    updateAbstract,
+    updateReferences,
+    addReference,
+    updateReferenceItem,
+    deleteReferenceItem,
+    moveReferenceItemUp,
+    moveReferenceItemDown,
     addSection,
     updateSection,
     deleteSection,
