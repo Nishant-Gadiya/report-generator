@@ -13,13 +13,13 @@ import GeneratePage from './pages/GeneratePage.jsx';
 import './App.css';
 
 const NAV_ITEMS = [
-  { id: 'front-sheet', label: 'Front Sheet', icon: '📄', page: FrontSheetPage },
-  { id: 'prelims', label: 'Acknowledgement & Abstract', icon: '📑', page: PrelimsPage },
-  { id: 'sections', label: 'Report Sections', icon: '📝', page: SectionsPage },
-  { id: 'references', label: 'References', icon: '📚', page: ReferencesPage },
-  { id: 'header-footer', label: 'Header & Footer', icon: '🔝', page: HeaderFooterPage },
-  { id: 'settings', label: 'Settings & Templates', icon: '⚙️', page: SettingsPage },
-  { id: 'generate', label: 'Generate PDF', icon: '🖨️', page: GeneratePage },
+  { id: 'front-sheet',   label: 'Front Sheet',              icon: '📄', page: FrontSheetPage },
+  { id: 'prelims',       label: 'Acknowledgement & Abstract',icon: '📑', page: PrelimsPage },
+  { id: 'sections',      label: 'Report Sections',           icon: '📝', page: SectionsPage },
+  { id: 'references',    label: 'References',                icon: '📚', page: ReferencesPage },
+  { id: 'header-footer', label: 'Header & Footer',           icon: '🔝', page: HeaderFooterPage },
+  { id: 'settings',      label: 'Settings & Templates',      icon: '⚙️',  page: SettingsPage },
+  { id: 'generate',      label: 'Generate PDF',              icon: '🖨️',  page: GeneratePage },
 ];
 
 function AppShell() {
@@ -30,7 +30,9 @@ function AppShell() {
     return (
       <div className="spinner-wrap">
         <div className="spinner" />
-        <p>Loading your report…</p>
+        <p style={{ fontSize: '.875rem', color: 'var(--c-text-muted)' }}>
+          Loading your report…
+        </p>
       </div>
     );
   }
@@ -39,9 +41,7 @@ function AppShell() {
 
   function handleNewReport() {
     if (
-      confirm(
-        'Create a new report? Your current work will be cleared from local storage.'
-      )
+      confirm('Create a new report? Your current work will be cleared from local storage.')
     ) {
       newReport();
       setActiveNav('front-sheet');
@@ -52,7 +52,7 @@ function AppShell() {
     <div className="app-shell">
       {/* ── Header ── */}
       <header className="app-header">
-        <div className="header-logo-mark">📚</div>
+        <div className="header-logo-mark" aria-hidden="true">📚</div>
         <div>
           <div className="header-brand">Academic Report Generator</div>
           <div className="header-subtitle">Paged.js · React · Vite</div>
@@ -62,7 +62,7 @@ function AppShell() {
           <AutosaveIndicator report={report} />
           <button
             id="btn-new-report"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-header btn-sm"
             onClick={handleNewReport}
           >
             + New Report
@@ -72,35 +72,53 @@ function AppShell() {
 
       {/* ── Sidebar ── */}
       <nav className="app-sidebar" aria-label="Main navigation">
-        <div className="sidebar-section-label">Navigation</div>
+        <div className="sidebar-section-label">Pages</div>
 
         {NAV_ITEMS.map((item) => (
           <button
             key={item.id}
             id={`nav-${item.id}`}
-            className={`sidebar-nav-item ${activeNav === item.id ? 'active' : ''}`}
+            className={`sidebar-nav-item${activeNav === item.id ? ' active' : ''}`}
             onClick={() => setActiveNav(item.id)}
-            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
+            aria-current={activeNav === item.id ? 'page' : undefined}
           >
-            <span className="nav-icon">{item.icon}</span>
+            <span className="nav-icon" aria-hidden="true">{item.icon}</span>
             {item.label}
           </button>
         ))}
 
-        <hr className="divider" style={{ margin: '12px 16px' }} />
+        <hr className="sidebar-divider" style={{ marginTop: 'auto' }} />
 
         <div className="sidebar-section-label">Report Info</div>
-        <div style={{ padding: '8px 16px', fontSize: '.75rem', color: 'var(--c-text-dim)', lineHeight: '1.6' }}>
-          <div>{report?.sections?.length ?? 0} sections</div>
-          <div>{report?.references?.items?.length ?? 0} references</div>
-          <div>{report?.frontSheet?.students?.filter((s) => s.name || s.usn).length ?? 0} students</div>
-          <div>Template: {report?.settings?.template ?? '—'}</div>
+        <div className="sidebar-info">
+          <div className="sidebar-info-row">
+            <span>Sections</span>
+            <span className="sidebar-info-val">{report?.sections?.length ?? 0}</span>
+          </div>
+          <div className="sidebar-info-row">
+            <span>References</span>
+            <span className="sidebar-info-val">{report?.references?.items?.length ?? 0}</span>
+          </div>
+          <div className="sidebar-info-row">
+            <span>Students</span>
+            <span className="sidebar-info-val">
+              {report?.frontSheet?.students?.filter((s) => s.name || s.usn).length ?? 0}
+            </span>
+          </div>
+          <div className="sidebar-info-row">
+            <span>Template</span>
+            <span className="sidebar-info-val" style={{ textTransform: 'capitalize' }}>
+              {report?.settings?.template ?? '—'}
+            </span>
+          </div>
         </div>
       </nav>
 
       {/* ── Main Content ── */}
       <main className="app-main" id="app-main">
-        <ActivePage />
+        <div className="page-content">
+          <ActivePage />
+        </div>
       </main>
     </div>
   );
@@ -109,10 +127,10 @@ function AppShell() {
 function AutosaveIndicator({ report }) {
   if (!report) return null;
   const lastSaved = report.updatedAt
-    ? new Date(report.updatedAt).toLocaleTimeString()
+    ? new Date(report.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : null;
   return (
-    <div className="autosave-indicator" title={`Last saved: ${lastSaved}`}>
+    <div className="autosave-indicator" title={`Last saved: ${lastSaved ?? 'not yet'}`}>
       <div className="autosave-dot" />
       <span>{lastSaved ? `Saved ${lastSaved}` : 'Unsaved'}</span>
     </div>
